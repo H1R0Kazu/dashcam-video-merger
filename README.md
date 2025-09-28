@@ -36,6 +36,36 @@ sudo apt update && sudo apt install ffmpeg
 choco install ffmpeg
 ```
 
+## プロジェクト構造
+
+```
+dashcam-video-merger/
+├── src/
+│   └── dashcam_merger/           # メインパッケージ
+│       ├── __init__.py
+│       ├── __main__.py          # python -m dashcam_merger エントリーポイント
+│       ├── core/                # コア機能（設定・データモデル）
+│       │   ├── config.py
+│       │   └── models.py
+│       ├── parsers/             # ファイル解析
+│       │   └── file_parser.py
+│       ├── processors/          # 動画処理
+│       │   └── video_merger.py
+│       └── cli/                 # コマンドラインインターフェース
+│           └── main.py
+├── scripts/
+│   └── dashcam_merger.py        # 実行スクリプト（後方互換性）
+├── config/
+│   ├── config.json             # 設定ファイル
+│   └── config.json.example     # 設定ファイルサンプル
+├── docs/
+│   └── ARCHITECTURE.md         # アーキテクチャ設計書
+├── tests/                      # テストファイル（今後追加予定）
+├── pyproject.toml              # モダンなPython設定
+├── requirements.txt
+└── README.md                   # このファイル
+```
+
 ## セットアップ
 
 1. リポジトリをクローン
@@ -44,10 +74,10 @@ git clone https://github.com/H1R0Kazu/dashcam-video-merger.git
 cd dashcam-video-merger
 ```
 
-2. 設定ファイルを編集
+2. 設定ファイルを作成・編集
 ```bash
-cp config.json.example config.json
-# config.jsonを環境に合わせて編集
+cp config/config.json.example config/config.json
+# config/config.jsonを環境に合わせて編集
 ```
 
 ## 設定ファイル例
@@ -84,22 +114,25 @@ cp config.json.example config.json
 ### 基本的な使用方法
 
 ```bash
-# 全ての日付をマージ
-python3 dashcam_merger.py
+# 推奨方法：モジュールとして実行
+PYTHONPATH=src python3 -m dashcam_merger
 
 # 特定の日付のみマージ
-python3 dashcam_merger.py -d 20250906
+PYTHONPATH=src python3 -m dashcam_merger -d 20250906
 
 # カスタム設定ファイルを使用
-python3 dashcam_merger.py -c custom_config.json
+PYTHONPATH=src python3 -m dashcam_merger -c config/custom.json
 
 # 詳細情報を非表示
-python3 dashcam_merger.py --no-info
+PYTHONPATH=src python3 -m dashcam_merger --no-info
+
+# 簡単な実行方法（スクリプト経由）
+python3 scripts/dashcam_merger.py -d 20250906
 ```
 
 ### オプション
 
-- `-c, --config`: 設定ファイルのパス（デフォルト: config.json）
+- `-c, --config`: 設定ファイルのパス（デフォルト: config/config.json）
 - `-d, --date`: 特定日付のみ処理（YYYYMMDD形式）
 - `--no-info`: ファイル情報表示を省略
 

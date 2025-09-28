@@ -129,8 +129,21 @@ dmypy.json
 .pyre/
 
 # Project specific
-config.json
+config/config.json
 filelist_*.txt
 merged_*.mp4
 *.MP4
 *.mp4
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+
+# Test coverage
+htmlcov/
+.coverage
+
+# IDE
+.vscode/
+.idea/
