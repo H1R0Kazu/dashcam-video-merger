@@ -1,0 +1,24 @@
+{
+  "camera_paths": {
+    "F": "/path/to/front/camera/videos",
+    "B": "/path/to/back/camera/videos"
+  },
+  "output_dir": "/path/to/output/directory",
+  "camera_names": {
+    "F": "フロント",
+    "B": "バック"
+  },
+  "video_pattern": "NO(\\d{8})-(\\d{6})-(\\d{6})([FB])\\.MP4",
+  "ffmpeg_settings": {
+    "copy_codec": {
+      "video": "copy",
+      "audio": "copy"
+    },
+    "reencode_settings": {
+      "video_codec": "libx264",
+      "audio_codec": "aac",
+      "preset": "fast",
+      "crf": "23"
+    }
+  }
+}
