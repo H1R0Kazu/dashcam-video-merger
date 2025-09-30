@@ -20,5 +20,9 @@
       "preset": "fast",
       "crf": "23"
     }
+  },
+  "performance_settings": {
+    "use_local_processing": true,
+    "comment": "NAS環境での高速化: ローカル一時ディレクトリを使用してマージ処理を高速化"
   }
 }

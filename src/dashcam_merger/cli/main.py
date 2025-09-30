@@ -96,7 +96,7 @@ class DashcamVideoMergerApp:
                 if show_info:
                     self.display_video_info(video_files, camera_name)
 
-                if self.video_merger.merge_videos(video_files, date_str, camera_pos):
+                if self.video_merger.merge_videos(video_files, date_str, camera_pos, self.config.use_local_processing):
                     success_count += 1
                 total_count += 1
                 print()

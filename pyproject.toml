@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dashcam-video-merger"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
     {name = "H1R0Kazu", email = "45536882+H1R0Kazu@users.noreply.github.com"},
 ]

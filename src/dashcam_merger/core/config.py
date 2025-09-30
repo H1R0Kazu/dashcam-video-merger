@@ -69,6 +69,11 @@ class Config:
         """FFmpegの再エンコード設定を取得"""
         return self.config["ffmpeg_settings"]["reencode_settings"]
 
+    @property
+    def use_local_processing(self) -> bool:
+        """ローカル処理を使用するかどうかを取得（NAS環境での高速化）"""
+        return self.config.get("performance_settings", {}).get("use_local_processing", True)
+
     def get_camera_name(self, camera_pos: str) -> str:
         """カメラ位置から表示名を取得"""
         return self.camera_names.get(camera_pos, camera_pos)
