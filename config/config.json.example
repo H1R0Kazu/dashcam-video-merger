@@ -24,5 +24,11 @@
   "performance_settings": {
     "use_local_processing": true,
     "comment": "NAS環境での高速化: ローカル一時ディレクトリを使用してマージ処理を高速化"
+  },
+  "ui_settings": {
+    "show_progress": true,
+    "progress_style": "bar",
+    "show_file_details": true,
+    "comment": "プログレス表示設定: bar(詳細バー), simple(シンプル表示)"
   }
 }

@@ -74,6 +74,30 @@ class Config:
         """ローカル処理を使用するかどうかを取得（NAS環境での高速化）"""
         return self.config.get("performance_settings", {}).get("use_local_processing", True)
 
+    @property
+    def ui_settings(self) -> Dict[str, Any]:
+        """UI設定を取得"""
+        return self.config.get("ui_settings", {
+            "show_progress": True,
+            "progress_style": "bar",
+            "show_file_details": True
+        })
+
+    @property
+    def show_progress(self) -> bool:
+        """プログレス表示するかどうかを取得"""
+        return self.ui_settings.get("show_progress", True)
+
+    @property
+    def progress_style(self) -> str:
+        """プログレススタイルを取得"""
+        return self.ui_settings.get("progress_style", "bar")
+
+    @property
+    def show_file_details(self) -> bool:
+        """ファイル詳細を表示するかどうかを取得"""
+        return self.ui_settings.get("show_file_details", True)
+
     def get_camera_name(self, camera_pos: str) -> str:
         """カメラ位置から表示名を取得"""
         return self.camera_names.get(camera_pos, camera_pos)
