@@ -15,6 +15,7 @@ from pathlib import Path
 from ..core.config import Config
 from ..parsers.file_parser import VideoFileParser
 from ..processors.video_merger import VideoMerger
+from ..ui.progress import ProgressTracker
 
 
 class DashcamVideoMergerApp:
@@ -66,7 +67,8 @@ class DashcamVideoMergerApp:
             return
 
         # 設定情報を表示
-        self.display_config_info()
+        if show_info:
+            self.display_config_info()
 
         # 特定の日付でフィルタリング
         if target_date:
@@ -79,30 +81,65 @@ class DashcamVideoMergerApp:
             print(f"見つかった日付: {len(videos_by_date_camera)} 日分")
         print()
 
+        # プログレストラッカーを初期化
+        progress_tracker = ProgressTracker(
+            show_progress=self.config.show_progress,
+            progress_style=self.config.progress_style
+        )
+
         # 日付・カメラ別にマージ処理
         success_count = 0
         total_count = 0
 
         for date_str in sorted(videos_by_date_camera.keys()):
             formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
-            print(f"=== 日付: {formatted_date} ===")
+
+            if show_info:
+                print(f"\n=== 日付: {formatted_date} ===")
 
             cameras_by_date = videos_by_date_camera[date_str]
-            for camera_pos in sorted(cameras_by_date.keys()):
-                video_files = cameras_by_date[camera_pos]
-                camera_name = self.config.get_camera_name(camera_pos)
-                print(f"--- {camera_name}カメラ ({camera_pos}) ---")
 
-                if show_info:
-                    self.display_video_info(video_files, camera_name)
+            # プログレス表示を開始
+            if self.config.show_progress:
+                progress_tracker.start_display()
 
-                if self.video_merger.merge_videos(video_files, date_str, camera_pos, self.config.use_local_processing):
-                    success_count += 1
-                total_count += 1
+            try:
+                for camera_pos in sorted(cameras_by_date.keys()):
+                    video_files = cameras_by_date[camera_pos]
+                    camera_name = self.config.get_camera_name(camera_pos)
+
+                    if show_info and not self.config.show_progress:
+                        print(f"--- {camera_name}カメラ ({camera_pos}) ---")
+                        self.display_video_info(video_files, camera_name)
+
+                    # プログレス表示付きでマージ実行
+                    if self.config.show_progress:
+                        success = self.video_merger.merge_videos_with_progress(
+                            video_files, date_str, camera_pos, progress_tracker, self.config.use_local_processing
+                        )
+                    else:
+                        # 従来の表示でマージ実行
+                        success = self.video_merger.merge_videos(
+                            video_files, date_str, camera_pos, self.config.use_local_processing
+                        )
+
+                    if success:
+                        success_count += 1
+                    total_count += 1
+
+                    if not self.config.show_progress:
+                        print()
+
+            finally:
+                # プログレス表示を停止
+                if self.config.show_progress:
+                    progress_tracker.stop_display()
+                    progress_tracker.print_final_summary()
+
+            if not self.config.show_progress:
                 print()
-            print()
 
-        print(f"マージ完了: {success_count}/{total_count} カメラ分")
+        print(f"\nマージ完了: {success_count}/{total_count} カメラ分")
 
 
 def main():

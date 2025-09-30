@@ -5,11 +5,13 @@
 import subprocess
 import tempfile
 import shutil
+import time
 from pathlib import Path
 from typing import List, Optional
 
 from ..core.config import Config
 from ..core.models import VideoFile
+from ..ui.progress import ProgressTracker
 
 
 class VideoMerger:
@@ -23,6 +25,7 @@ class VideoMerger:
             config: 設定オブジェクト
         """
         self.config = config
+        self.progress_tracker: Optional[ProgressTracker] = None
 
     def create_file_list(self, video_files: List[VideoFile], date_str: str, camera_pos: str, use_local_temp: bool = True) -> Path:
         """
@@ -111,6 +114,193 @@ class VideoMerger:
             self._cleanup_temp_file(temp_output_file)
 
         return success
+
+    def merge_videos_with_progress(self, video_files: List[VideoFile], date_str: str, camera_pos: str,
+                                 progress_tracker: ProgressTracker, use_local_processing: bool = True) -> bool:
+        """
+        プログレス表示付きで指定された動画ファイルをマージ
+
+        Args:
+            video_files: マージする動画ファイルのリスト
+            date_str: 日付文字列
+            camera_pos: カメラ位置
+            progress_tracker: プログレストラッカー
+            use_local_processing: ローカル処理を使用するかどうか
+
+        Returns:
+            マージ成功時True、失敗時False
+        """
+        if not video_files:
+            return False
+
+        camera_name = self.config.get_camera_name(camera_pos)
+
+        # プログレストラッカーを設定
+        self.progress_tracker = progress_tracker
+
+        # ファイルサイズを計算
+        total_size_mb = sum(video.path.stat().st_size for video in video_files) / (1024 * 1024)
+
+        # カメラをプログレストラッカーに追加
+        progress_tracker.add_camera(camera_pos, camera_name, len(video_files), total_size_mb)
+
+        # 処理開始の更新
+        progress_tracker.update_camera(camera_pos, 0, "", 0.0, f"{camera_name}カメラ処理開始")
+
+        # ファイルリストを作成
+        list_file = self.create_file_list(video_files, date_str, camera_pos, use_local_temp=use_local_processing)
+
+        # 出力ファイル名を生成
+        formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+        final_output_file = self.config.output_dir / f"merged_{formatted_date}_{camera_pos}.mp4"
+
+        # ローカル処理の場合、一時出力ファイルを使用
+        if use_local_processing:
+            temp_dir = Path(tempfile.gettempdir())
+            temp_output_file = temp_dir / f"merged_{formatted_date}_{camera_pos}.mp4"
+        else:
+            temp_output_file = final_output_file
+
+        success = False
+
+        try:
+            # ストリームコピーを試行
+            progress_tracker.update_camera(camera_pos, 1, str(video_files[0].path), 0.0,
+                                         f"{camera_name}カメラ ストリームコピー中")
+
+            if self._try_stream_copy_optimized_with_progress(list_file, temp_output_file,
+                                                           camera_pos, camera_name):
+                success = True
+            else:
+                # 再エンコードを試行
+                progress_tracker.update_camera(camera_pos, 1, str(video_files[0].path), 0.0,
+                                             f"{camera_name}カメラ 再エンコード中")
+                success = self._try_reencode_optimized_with_progress(list_file, temp_output_file,
+                                                                   camera_pos, camera_name)
+
+            # ローカル処理の場合、最終出力先に移動
+            if success and use_local_processing and temp_output_file != final_output_file:
+                progress_tracker.update_camera(camera_pos, len(video_files) - 1, "", total_size_mb * 0.9,
+                                             f"{camera_name}カメラ NASに移動中")
+                try:
+                    shutil.move(str(temp_output_file), str(final_output_file))
+                    progress_tracker.update_camera(camera_pos, len(video_files), str(final_output_file),
+                                                 total_size_mb, f"{camera_name}カメラ 完了")
+                except Exception as e:
+                    progress_tracker.update_camera(camera_pos, len(video_files) - 1, "", total_size_mb * 0.9,
+                                                 f"{camera_name}カメラ 移動エラー: {e}")
+                    success = False
+            elif success:
+                progress_tracker.update_camera(camera_pos, len(video_files), str(final_output_file),
+                                             total_size_mb, f"{camera_name}カメラ 完了")
+
+        except Exception as e:
+            progress_tracker.update_camera(camera_pos, 0, "", 0.0, f"{camera_name}カメラ エラー: {e}")
+            success = False
+
+        # 一時ファイルをクリーンアップ
+        self._cleanup_temp_file(list_file)
+        if use_local_processing and temp_output_file.exists() and temp_output_file != final_output_file:
+            self._cleanup_temp_file(temp_output_file)
+
+        return success
+
+    def _try_stream_copy_optimized_with_progress(self, list_file: Path, output_file: Path,
+                                               camera_pos: str, camera_name: str) -> bool:
+        """
+        プログレス表示付きストリームコピーでマージを試行
+        """
+        copy_settings = self.config.ffmpeg_copy_settings
+        cmd = [
+            'ffmpeg',
+            '-probesize', '32M',
+            '-analyzeduration', '10M',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', str(list_file),
+            '-c:v', copy_settings["video"],
+            '-c:a', copy_settings["audio"],
+            '-avoid_negative_ts', 'make_zero',
+            '-fflags', '+genpts',
+            '-y',
+            str(output_file)
+        ]
+
+        try:
+            # FFmpegプロセスを実行してプログレスを監視
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     text=True, universal_newlines=True)
+
+            # プログレス監視（簡易版）
+            if self.progress_tracker:
+                time.sleep(1)  # 処理時間をシミュレート
+                self.progress_tracker.update_camera(camera_pos, 1, str(output_file), 0.0,
+                                                   f"{camera_name}カメラ ストリームコピー処理中")
+
+            stdout, stderr = process.communicate()
+
+            if process.returncode == 0:
+                return True
+            else:
+                return False
+
+        except subprocess.CalledProcessError:
+            return False
+        except FileNotFoundError:
+            if self.progress_tracker:
+                self.progress_tracker.update_camera(camera_pos, 0, "", 0.0,
+                                                   f"{camera_name}カメラ FFmpegエラー")
+            return False
+
+    def _try_reencode_optimized_with_progress(self, list_file: Path, output_file: Path,
+                                            camera_pos: str, camera_name: str) -> bool:
+        """
+        プログレス表示付き再エンコードでマージを試行
+        """
+        reencode_settings = self.config.ffmpeg_reencode_settings
+        cmd = [
+            'ffmpeg',
+            '-probesize', '32M',
+            '-analyzeduration', '10M',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', str(list_file),
+            '-c:v', reencode_settings["video_codec"],
+            '-c:a', reencode_settings["audio_codec"],
+            '-preset', reencode_settings["preset"],
+            '-crf', reencode_settings["crf"],
+            '-avoid_negative_ts', 'make_zero',
+            '-threads', '0',
+            '-y',
+            str(output_file)
+        ]
+
+        try:
+            # FFmpegプロセスを実行してプログレスを監視
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     text=True, universal_newlines=True)
+
+            # プログレス監視（簡易版）
+            if self.progress_tracker:
+                time.sleep(2)  # 再エンコードは時間がかかる
+                self.progress_tracker.update_camera(camera_pos, 1, str(output_file), 0.0,
+                                                   f"{camera_name}カメラ 再エンコード処理中")
+
+            stdout, stderr = process.communicate()
+
+            if process.returncode == 0:
+                return True
+            else:
+                # ファイルが作成されているかチェック
+                if output_file.exists() and output_file.stat().st_size > 0:
+                    return True
+                return False
+
+        except subprocess.CalledProcessError:
+            # ファイルが作成されているかチェック
+            if output_file.exists() and output_file.stat().st_size > 0:
+                return True
+            return False
 
     def _try_stream_copy_optimized(self, list_file: Path, output_file: Path) -> bool:
         """
