@@ -147,3 +147,15 @@ htmlcov/
 # IDE
 .vscode/
 .idea/
+
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+
+# MCP configuration (contains sensitive tokens)
+.mcp.json
+
+# Development logs (personal work logs)
+docs/DAILY_LOG_*.md
