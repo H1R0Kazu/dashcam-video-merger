@@ -52,6 +52,8 @@ dashcam-video-merger/
 │       │   └── file_parser.py
 │       ├── processors/          # 動画処理
 │       │   └── video_merger.py
+│       ├── ui/                  # プログレス表示
+│       │   └── progress.py
 │       └── cli/                 # コマンドラインインターフェース
 │           └── main.py
 ├── scripts/
@@ -61,7 +63,12 @@ dashcam-video-merger/
 │   └── config.json.example     # 設定ファイルサンプル
 ├── docs/
 │   └── ARCHITECTURE.md         # アーキテクチャ設計書
-├── tests/                      # テストファイル（今後追加予定）
+├── examples/
+│   └── demo_progress.py        # プログレス表示のデモ（動画ファイル不要）
+├── legacy/
+│   └── dashcam_merger_old.py   # 旧モノリシック版（参考）
+├── DEVELOPMENT_LOG.md          # 開発の記録
+├── LICENSE                     # MIT License
 ├── pyproject.toml              # モダンなPython設定
 ├── requirements.txt
 └── README.md                   # このファイル
@@ -94,7 +101,7 @@ cp config/config.json.example config/config.json
     "F": "フロント",
     "B": "バック"
   },
-  "video_pattern": "NO(\\\\d{8})-(\\\\d{6})-(\\\\d{6})([FB])\\\\.MP4",
+  "video_pattern": "NO(\\d{8})-(\\d{6})-(\\d{6})([FB])\\.MP4",
   "ffmpeg_settings": {
     "copy_codec": {
       "video": "copy",
@@ -146,6 +153,12 @@ python3 scripts/dashcam_merger.py -d 20250906
 マージされた動画は以下の形式で保存されます：
 - フロントカメラ: `merged_2025-09-06_F.mp4`
 - バックカメラ: `merged_2025-09-06_B.mp4`
+
+## 関連ドキュメント
+
+- [アーキテクチャ設計書](docs/ARCHITECTURE.md)
+- [開発の記録](DEVELOPMENT_LOG.md)
+- プログレス表示のデモ: `python3 examples/demo_progress.py`
 
 ## 動作例
 
@@ -201,7 +214,7 @@ NAS（ネットワークストレージ）環境では処理が遅くなるこ�
 
 ## ライセンス
 
-MIT License
+MIT License（[LICENSE](LICENSE) を参照）
 
 ## 貢献
 

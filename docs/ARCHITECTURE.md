@@ -7,17 +7,23 @@
 ## ファイル構造
 
 ```
-dashcam_video_merger/
+src/dashcam_merger/
 ├── __init__.py              # パッケージ初期化
-├── main.py                  # メインエントリーポイント
-├── dashcam_merger.py        # main.pyへのシンボリックリンク（後方互換性）
-├── config.py                # 設定管理モジュール
-├── file_parser.py           # ファイル解析・検索モジュール
-├── video_merger.py          # 動画マージ処理モジュール
-├── config.json.example      # 設定ファイルサンプル
-├── config.json              # 実際の設定ファイル（.gitignoreで除外）
-├── dashcam_merger_old.py    # 旧モノリシック版（参考）
-└── README.md               # 使用方法ドキュメント
+├── __main__.py              # python -m dashcam_merger エントリーポイント
+├── core/
+│   ├── config.py            # 設定管理モジュール
+│   └── models.py            # データモデル
+├── parsers/
+│   └── file_parser.py       # ファイル解析・検索モジュール
+├── processors/
+│   └── video_merger.py      # 動画マージ処理モジュール
+├── ui/
+│   └── progress.py          # プログレス表示
+└── cli/
+    └── main.py              # コマンドラインインターフェース
+config/config.json.example   # 設定ファイルサンプル（config.json は .gitignore で除外）
+scripts/dashcam_merger.py    # 実行スクリプト（後方互換性）
+legacy/dashcam_merger_old.py # 旧モノリシック版（参考）
 ```
 
 ## モジュール設計

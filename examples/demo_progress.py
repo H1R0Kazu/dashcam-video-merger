@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 # プロジェクトルートをPYTHONPATHに追加
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from dashcam_merger.ui.progress import ProgressTracker, SimpleProgressBar
 
